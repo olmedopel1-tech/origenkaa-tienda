@@ -6,24 +6,18 @@ import {
   Settings, Package, CreditCard, AlertCircle, Copy, ExternalLink
 } from 'lucide-react';
 
-// Componente del Logo Oficial de ORIGEN KA'A
-const LogoOrigenKaa = ({ className = "w-10 h-10" }) => (
-  <svg viewBox="0 0 500 500" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="250" cy="250" r="235" stroke="#493528" strokeWidth="18" />
-    <path d="M165 200 C 130 160, 160 100, 205 130 C 220 170, 185 210, 165 200 Z" stroke="#493528" strokeWidth="14" fill="none" />
-    <path d="M125 270 C 90 230, 120 170, 165 200 C 180 240, 145 280, 125 270 Z" stroke="#493528" strokeWidth="14" fill="none" />
-    <line x1="360" y1="110" x2="310" y2="290" stroke="#493528" strokeWidth="22" strokeLinecap="round" />
-    <path d="M360 110 L 335 125" stroke="#493528" strokeWidth="20" strokeLinecap="round" />
-    <path d="M230 180 A 50 50 0 0 1 290 215" stroke="#493528" strokeWidth="14" strokeLinecap="round" fill="none" />
-    <line x1="230" y1="160" x2="230" y2="180" stroke="#493528" strokeWidth="12" strokeLinecap="round" />
-    <line x1="260" y1="155" x2="260" y2="178" stroke="#493528" strokeWidth="12" strokeLinecap="round" />
-    <line x1="288" y1="168" x2="280" y2="188" stroke="#493528" strokeWidth="12" strokeLinecap="round" />
-    <path d="M115 325 C 180 260, 290 320, 345 270" stroke="#493528" strokeWidth="16" strokeLinecap="round" fill="none" />
-    <path d="M130 355 C 195 290, 305 350, 355 290" stroke="#493528" strokeWidth="16" strokeLinecap="round" fill="none" />
-    <path d="M185 320 C 190 400, 270 415, 305 350" stroke="#493528" strokeWidth="16" strokeLinecap="round" fill="none" />
-    <path d="M265 310 C 230 410, 350 410, 355 300 Z" stroke="#493528" strokeWidth="14" fill="none" />
-  </svg>
-);
+const INITIAL_SETTINGS = {
+  bannerText: 'Envíos gratis a todo el país en compras superiores a $75.000 | Ushuaia, Tierra del Fuego',
+  heroTitle: 'Tu ritual, tu esencia',
+  heroSubtitle: 'Mates artesanales, termos de alta conservación y accesorios materos.',
+  whatsapp: '54290115000000',
+  instagram: '@origenkaa',
+  logoUrl: 'https://images.unsplash.com/photo-1594910085817-497672e8cb30?q=80&w=200&auto=format&fit=crop',
+  heroImages: [
+    'https://images.unsplash.com/photo-1594910085817-497672e8cb30?q=80&w=1600&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=1600&auto=format&fit=crop'
+  ]
+};
 
 const INITIAL_PRODUCTS = [
   {
@@ -53,6 +47,11 @@ const INITIAL_PRODUCTS = [
 ];
 
 export default function App() {
+  const [siteSettings, setSiteSettings] = useState(() => {
+    const saved = localStorage.getItem('kaa_site_settings');
+    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
+  });
+
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('kaa_products');
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
@@ -65,6 +64,9 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState(() => localStorage.getItem('kaa_current_view') || 'home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => localStorage.getItem('kaa_admin_logged') === 'true');
+  const [activeAdminTab, setActiveAdminTab] = useState('settings'); // settings, products
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+
   const [selectedProduct, setSelectedProduct] = useState(() => {
     const saved = localStorage.getItem('kaa_selected_product');
     return saved ? JSON.parse(saved) : null;
@@ -80,15 +82,21 @@ export default function App() {
     name: '', category: 'Mates', price: '', promoPrice: '', description: '', image: '', variantName: 'Estándar', sku: '', stock: 10
   });
 
-  const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', phone: '', address: '', paymentMethod: 'transfer'
-  });
-  const [lastOrder, setLastOrder] = useState(null);
-
+  // Guardar configuración y datos
+  useEffect(() => { localStorage.setItem('kaa_site_settings', JSON.stringify(siteSettings)); }, [siteSettings]);
   useEffect(() => { localStorage.setItem('kaa_products', JSON.stringify(products)); }, [products]);
   useEffect(() => { localStorage.setItem('kaa_cart', JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem('kaa_current_view', currentView); }, [currentView]);
   useEffect(() => { localStorage.setItem('kaa_admin_logged', isAdminLoggedIn ? 'true' : 'false'); }, [isAdminLoggedIn]);
+
+  // Rotación del Carrusel
+  useEffect(() => {
+    if (siteSettings.heroImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setHeroSlideIndex(prev => (prev + 1) % siteSettings.heroImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [siteSettings.heroImages]);
 
   const changeView = (viewName) => {
     setCurrentView(viewName);
@@ -133,6 +141,11 @@ export default function App() {
     }
   };
 
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    alert('¡Configuración de marca actualizada correctamente!');
+  };
+
   const handleAddProduct = (e) => {
     e.preventDefault();
     const created = {
@@ -154,12 +167,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F3EBDD] text-[#292724] font-sans">
-      {/* Banner Superior con Verde Salvia */}
+      {/* Banner Superior Dinámico */}
       <div className="bg-[#493528] text-[#F3EBDD] text-xs py-2 px-4 text-center tracking-wider uppercase font-medium border-b border-[#71806A]">
-        Envíos gratis a todo el país en compras superiores a $75.000 | Ushuaia, Tierra del Fuego
+        {siteSettings.bannerText}
       </div>
 
-      {/* Header con Paleta Personalizada */}
+      {/* Header Dinámico */}
       <header className="sticky top-0 z-40 bg-[#F3EBDD]/95 backdrop-blur-md border-b border-[#C4A989]">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 text-[#292724]">
@@ -167,7 +180,11 @@ export default function App() {
           </button>
 
           <div onClick={() => { setSelectedCategory('Todas'); changeView('home'); }} className="cursor-pointer flex items-center space-x-3">
-            <LogoOrigenKaa className="w-10 h-10 md:w-12 md:h-12" />
+            <img 
+              src={siteSettings.logoUrl} 
+              alt="Logo ORIGEN KA’A" 
+              className="w-10 h-10 md:w-12 md:h-12 object-cover rounded-full border border-[#493528]" 
+            />
             <div>
               <h1 className="text-xl md:text-2xl font-serif tracking-widest text-[#292724] font-bold leading-none">
                 ORIGEN KA’A
@@ -209,14 +226,15 @@ export default function App() {
       <main className="flex-1">
         {currentView === 'home' && (
           <div>
-            <section className="relative h-[65vh] bg-cover bg-center flex items-center justify-center text-center px-4" style={{ backgroundImage: `linear-gradient(rgba(41, 39, 36, 0.55), rgba(41, 39, 36, 0.55)), url('https://images.unsplash.com/photo-1594910085817-497672e8cb30?q=80&w=1600&auto=format&fit=crop')` }}>
+            {/* Carrusel / Portada Dinámica */}
+            <section className="relative h-[65vh] bg-cover bg-center transition-all duration-700 flex items-center justify-center text-center px-4" style={{ backgroundImage: `linear-gradient(rgba(41, 39, 36, 0.55), rgba(41, 39, 36, 0.55)), url('${siteSettings.heroImages[heroSlideIndex] || siteSettings.heroImages[0]}')` }}>
               <div className="max-w-3xl text-[#F3EBDD] space-y-6">
                 <span className="text-xs uppercase tracking-widest bg-[#71806A] text-[#F3EBDD] px-4 py-1.5 rounded-full font-bold">
                   Ushuaia • Tierra del Fuego
                 </span>
-                <h2 className="text-4xl md:text-6xl font-serif">Tu ritual, tu esencia</h2>
+                <h2 className="text-4xl md:text-6xl font-serif">{siteSettings.heroTitle}</h2>
                 <p className="text-base md:text-lg font-light text-[#F3EBDD]/90">
-                  Mates artesanales, termos de alta conservación y accesorios materos.
+                  {siteSettings.heroSubtitle}
                 </p>
                 <button 
                   onClick={() => { setSelectedCategory('Todas'); changeView('catalog'); }}
@@ -277,38 +295,7 @@ export default function App() {
           </div>
         )}
 
-        {currentView === 'product' && selectedProduct && (
-          <div className="max-w-5xl mx-auto px-4 py-12">
-            <button onClick={() => changeView('catalog')} className="flex items-center text-xs uppercase text-[#493528] font-bold mb-6">
-              <ArrowLeft size={16} className="mr-2" /> Volver
-            </button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <img src={selectedProduct.images[0]} alt={selectedProduct.name} className="w-full aspect-square object-cover border border-[#C4A989]" />
-              <div>
-                <span className="text-xs uppercase text-[#71806A] font-bold">{selectedProduct.category}</span>
-                <h1 className="text-3xl font-serif text-[#292724] mt-1">{selectedProduct.name}</h1>
-                <p className="text-2xl font-bold mt-2 text-[#493528]">${(selectedProduct.promoPrice || selectedProduct.price).toLocaleString('es-AR')}</p>
-                <p className="text-sm text-[#493528] my-4 leading-relaxed">{selectedProduct.description}</p>
-                
-                <div className="space-y-3 mt-6">
-                  <p className="text-xs uppercase font-bold text-[#292724]">Seleccionar Variante:</p>
-                  {selectedProduct.variants.map(variant => (
-                    <button
-                      key={variant.id}
-                      onClick={() => addToCart(selectedProduct, variant)}
-                      className="w-full p-3 border border-[#C4A989] text-left flex justify-between text-sm bg-white hover:border-[#292724]"
-                    >
-                      <span>{variant.name}</span>
-                      <span className="text-xs text-[#71806A] font-bold">{variant.stock} en stock</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ADMIN PANEL */}
+        {/* PANEL DE ADMINISTRACIÓN COMPLETO */}
         {currentView === 'admin' && (
           <div className="max-w-4xl mx-auto px-4 py-12">
             {!isAdminLoggedIn ? (
@@ -348,63 +335,167 @@ export default function App() {
                 <div className="flex justify-between items-center mb-8 pb-4 border-b border-[#C4A989]">
                   <div>
                     <h2 className="text-3xl font-serif text-[#292724]">Panel de Control Admin</h2>
-                    <p className="text-xs text-[#71806A] font-bold">Sesión activa • Gestión de catálogo</p>
+                    <p className="text-xs text-[#71806A] font-bold">Gestión total de la tienda</p>
                   </div>
                   <button onClick={() => { setIsAdminLoggedIn(false); localStorage.removeItem('kaa_admin_logged'); }} className="text-xs text-red-700 font-bold border border-red-300 px-3 py-1 bg-red-50">
                     Cerrar Sesión
                   </button>
                 </div>
 
-                <div className="bg-white p-6 border border-[#C4A989] mb-12">
-                  <h3 className="text-lg font-serif text-[#292724] mb-4">Cargar Nuevo Producto</h3>
-                  <form onSubmit={handleAddProduct} className="space-y-4">
+                {/* Pestanias del Admin */}
+                <div className="flex space-x-2 border-b border-[#C4A989] mb-8">
+                  <button 
+                    onClick={() => setActiveAdminTab('settings')}
+                    className={`py-3 px-6 text-xs uppercase tracking-widest font-bold ${activeAdminTab === 'settings' ? 'bg-[#292724] text-[#F3EBDD]' : 'bg-white border text-[#292724]'}`}
+                  >
+                    Configuración Marca & Fotos
+                  </button>
+                  <button 
+                    onClick={() => setActiveAdminTab('products')}
+                    className={`py-3 px-6 text-xs uppercase tracking-widest font-bold ${activeAdminTab === 'products' ? 'bg-[#292724] text-[#F3EBDD]' : 'bg-white border text-[#292724]'}`}
+                  >
+                    Cargar / Editar Productos
+                  </button>
+                </div>
+
+                {/* PESTANIA 1: CONFIGURACION DE TIENDA */}
+                {activeAdminTab === 'settings' && (
+                  <form onSubmit={handleSaveSettings} className="bg-white p-6 border border-[#C4A989] space-y-6">
+                    <h3 className="text-lg font-serif text-[#292724]">Encabezado y Contacto</h3>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">Texto del Banner Superior</label>
+                      <input 
+                        type="text" value={siteSettings.bannerText} onChange={e => setSiteSettings({...siteSettings, bannerText: e.target.value})}
+                        className="w-full p-2 border border-[#C4A989] text-sm"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs uppercase font-bold mb-1">Nombre</label>
+                        <label className="block text-xs uppercase font-bold mb-1">Número de WhatsApp (con código de área)</label>
                         <input 
-                          type="text" required placeholder="Ej: Mate Torpedo Calabaza"
-                          value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                          type="text" value={siteSettings.whatsapp} onChange={e => setSiteSettings({...siteSettings, whatsapp: e.target.value})}
                           className="w-full p-2 border border-[#C4A989] text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs uppercase font-bold mb-1">Categoría</label>
-                        <select 
-                          value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})}
-                          className="w-full p-2 border border-[#C4A989] text-sm bg-white"
-                        >
-                          <option value="Mates">Mates</option>
-                          <option value="Termos">Termos</option>
-                          <option value="Bombillas">Bombillas</option>
-                          <option value="Accesorios">Accesorios</option>
-                        </select>
+                        <label className="block text-xs uppercase font-bold mb-1">Instagram (@usuario)</label>
+                        <input 
+                          type="text" value={siteSettings.instagram} onChange={e => setSiteSettings({...siteSettings, instagram: e.target.value})}
+                          className="w-full p-2 border border-[#C4A989] text-sm"
+                        />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs uppercase font-bold mb-1">Precio ($)</label>
-                        <input 
-                          type="number" required placeholder="42000"
-                          value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})}
-                          className="w-full p-2 border border-[#C4A989] text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs uppercase font-bold mb-1">URL de la Foto</label>
-                        <input 
-                          type="url" placeholder="https://..."
-                          value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})}
-                          className="w-full p-2 border border-[#C4A989] text-sm"
-                        />
-                      </div>
+                    <h3 className="text-lg font-serif text-[#292724] pt-4 border-t">Textos de Portada (Hero)</h3>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">Título de Portada</label>
+                      <input 
+                        type="text" value={siteSettings.heroTitle} onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value})}
+                        className="w-full p-2 border border-[#C4A989] text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">Subtítulo de Portada</label>
+                      <input 
+                        type="text" value={siteSettings.heroSubtitle} onChange={e => setSiteSettings({...siteSettings, heroSubtitle: e.target.value})}
+                        className="w-full p-2 border border-[#C4A989] text-sm"
+                      />
+                    </div>
+
+                    <h3 className="text-lg font-serif text-[#292724] pt-4 border-t">Fotos de Marca & Carrusel</h3>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">URL Foto de Logo</label>
+                      <input 
+                        type="url" value={siteSettings.logoUrl} onChange={e => setSiteSettings({...siteSettings, logoUrl: e.target.value})}
+                        className="w-full p-2 border border-[#C4A989] text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">Foto 1 del Carrusel de Portada</label>
+                      <input 
+                        type="url" value={siteSettings.heroImages[0] || ''} onChange={e => {
+                          const updated = [...siteSettings.heroImages];
+                          updated[0] = e.target.value;
+                          setSiteSettings({...siteSettings, heroImages: updated});
+                        }}
+                        className="w-full p-2 border border-[#C4A989] text-sm mb-2"
+                      />
+                      <label className="block text-xs uppercase font-bold mb-1">Foto 2 del Carrusel de Portada</label>
+                      <input 
+                        type="url" value={siteSettings.heroImages[1] || ''} onChange={e => {
+                          const updated = [...siteSettings.heroImages];
+                          updated[1] = e.target.value;
+                          setSiteSettings({...siteSettings, heroImages: updated});
+                        }}
+                        className="w-full p-2 border border-[#C4A989] text-sm"
+                      />
                     </div>
 
                     <button type="submit" className="w-full bg-[#71806A] text-[#F3EBDD] py-3 text-xs uppercase tracking-widest font-bold hover:bg-[#493528]">
-                      Guardar y Publicar
+                      Guardar Todos los Cambios
                     </button>
                   </form>
-                </div>
+                )}
+
+                {/* PESTANIA 2: PRODUCTOS */}
+                {activeAdminTab === 'products' && (
+                  <div className="bg-white p-6 border border-[#C4A989]">
+                    <h3 className="text-lg font-serif text-[#292724] mb-4">Cargar Nuevo Producto</h3>
+                    <form onSubmit={handleAddProduct} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs uppercase font-bold mb-1">Nombre</label>
+                          <input 
+                            type="text" required placeholder="Ej: Mate Torpedo Calabaza"
+                            value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                            className="w-full p-2 border border-[#C4A989] text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs uppercase font-bold mb-1">Categoría</label>
+                          <select 
+                            value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})}
+                            className="w-full p-2 border border-[#C4A989] text-sm bg-white"
+                          >
+                            <option value="Mates">Mates</option>
+                            <option value="Termos">Termos</option>
+                            <option value="Bombillas">Bombillas</option>
+                            <option value="Accesorios">Accesorios</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs uppercase font-bold mb-1">Precio ($)</label>
+                          <input 
+                            type="number" required placeholder="42000"
+                            value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})}
+                            className="w-full p-2 border border-[#C4A989] text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs uppercase font-bold mb-1">URL Foto Producto</label>
+                          <input 
+                            type="url" placeholder="https://..."
+                            value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})}
+                            className="w-full p-2 border border-[#C4A989] text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <button type="submit" className="w-full bg-[#71806A] text-[#F3EBDD] py-3 text-xs uppercase tracking-widest font-bold hover:bg-[#493528]">
+                        Guardar Producto
+                      </button>
+                    </form>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -425,3 +516,75 @@ export default function App() {
                 {cart.length === 0 ? (
                   <p className="text-center text-sm text-[#493528] py-12">El carrito está vacío.</p>
                 ) : (
+                  <div className="divide-y divide-[#C4A989] my-4 max-h-[60vh] overflow-y-auto">
+                    {cart.map(item => (
+                      <div key={`${item.productId}-${item.variantId}`} className="py-4 flex items-center space-x-4">
+                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover border border-[#C4A989]" />
+                        <div className="flex-1">
+                          <h4 className="text-sm font-bold text-[#292724]">{item.name}</h4>
+                          <p className="text-xs text-[#71806A] font-bold">{item.variantName}</p>
+                          <div className="flex items-center space-x-2 mt-2">
+                            <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity - 1)} className="p-1 border bg-white"><Minus size={12} /></button>
+                            <span className="text-xs font-bold">{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)} className="p-1 border bg-white"><Plus size={12} /></button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-bold">${(item.price * item.quantity).toLocaleString('es-AR')}</span>
+                          <button onClick={() => removeFromCart(item.productId, item.variantId)} className="block text-red-700 mt-2 ml-auto"><Trash2 size={16} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {cart.length > 0 && (
+                <div className="border-t border-[#C4A989] pt-4 space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span className="font-bold">${cartSubtotal.toLocaleString('es-AR')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Envío:</span>
+                    <span className="font-bold text-[#71806A]">{shippingCost === 0 ? '¡GRATIS!' : `$${shippingCost.toLocaleString('es-AR')}`}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-bold text-[#292724]">
+                    <span>Total:</span>
+                    <span>${cartTotal.toLocaleString('es-AR')}</span>
+                  </div>
+                  <button 
+                    onClick={() => { setIsCartOpen(false); changeView('checkout'); }}
+                    className="w-full bg-[#292724] text-[#F3EBDD] py-4 text-xs uppercase tracking-widest font-bold hover:bg-[#493528]"
+                  >
+                    FINALIZAR COMPRA
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pie de página */}
+      <footer className="bg-[#292724] text-[#F3EBDD] py-12 px-4 border-t border-[#71806A]">
+        <div className="max-w-7xl mx-auto text-center space-y-4">
+          <img src={siteSettings.logoUrl} alt="Logo" className="w-12 h-12 mx-auto rounded-full border border-[#C4A989]" />
+          <h4 className="text-xl font-serif tracking-widest">ORIGEN KA’A</h4>
+          <p className="text-xs text-[#C4A989]">El origen de cada encuentro • Ushuaia, Tierra del Fuego</p>
+          <div className="flex justify-center space-x-6 text-xs text-[#C4A989] pt-2">
+            <span>Instagram: {siteSettings.instagram}</span>
+            <span>WhatsApp: +{siteSettings.whatsapp}</span>
+          </div>
+          
+          <button 
+            onClick={() => changeView('admin')}
+            className="inline-flex items-center text-xs text-[#C4A989] hover:text-[#F3EBDD] tracking-widest uppercase pt-4"
+          >
+            <Lock size={12} className="mr-1" /> Acceso Administración
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+}
