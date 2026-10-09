@@ -54,19 +54,29 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [currentView, setCurrentView] = useState('home');
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  // Persistencia de la pantalla actual al refrescar
+  const [currentView, setCurrentView] = useState(() => {
+    return localStorage.getItem('kaa_current_view') || 'home';
+  });
+
+  // Persistencia de la sesión de Administrador
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    return localStorage.getItem('kaa_admin_logged') === 'true';
+  });
+
+  const [selectedProduct, setSelectedProduct] = useState(() => {
+    const saved = localStorage.getItem('kaa_selected_product');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   
-  // Login y Estado Admin
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
-  const [adminTab, setAdminTab] = useState('products'); // products, orders
 
-  // Formulario para Crear / Editar Producto en Admin
+  // Formulario para Crear Producto
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: 'Mates',
@@ -90,6 +100,7 @@ export default function App() {
   });
   const [lastOrder, setLastOrder] = useState(null);
 
+  // Guardar en localStorage ante cualquier cambio
   useEffect(() => {
     localStorage.setItem('kaa_products', JSON.stringify(products));
   }, [products]);
@@ -97,6 +108,28 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('kaa_cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('kaa_current_view', currentView);
+  }, [currentView]);
+
+  useEffect(() => {
+    localStorage.setItem('kaa_admin_logged', isAdminLoggedIn ? 'true' : 'false');
+  }, [isAdminLoggedIn]);
+
+  useEffect(() => {
+    if (selectedProduct) {
+      localStorage.setItem('kaa_selected_product', JSON.stringify(selectedProduct));
+    } else {
+      localStorage.removeItem('kaa_selected_product');
+    }
+  }, [selectedProduct]);
+
+  const changeView = (viewName) => {
+    setCurrentView(viewName);
+    setIsMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const addToCart = (product, variant, quantity = 1) => {
     setCart(prev => {
@@ -146,6 +179,12 @@ export default function App() {
     } else {
       alert('Credenciales incorrectas. Verificá mail y contraseña.');
     }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false);
+    localStorage.removeItem('kaa_admin_logged');
+    changeView('home');
   };
 
   const handleAddProduct = (e) => {
@@ -203,7 +242,7 @@ export default function App() {
             {isMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
 
-          <div onClick={() => { setCurrentView('home'); setSelectedCategory('Todas'); setIsMenuOpen(false); }} className="cursor-pointer text-center md:text-left">
+          <div onClick={() => { setSelectedCategory('Todas'); changeView('home'); }} className="cursor-pointer text-center md:text-left">
             <h1 className="text-2xl md:text-3xl font-serif tracking-widest text-[#2C221E] font-bold">
               ORIGEN KA’A
             </h1>
@@ -213,10 +252,10 @@ export default function App() {
           </div>
 
           <nav className="hidden md:flex space-x-8 text-sm tracking-widest uppercase font-medium text-[#5C4D42]">
-            <button onClick={() => { setCurrentView('home'); setSelectedCategory('Todas'); }} className="hover:text-[#2C221E]">Inicio</button>
-            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Todas'); }} className="hover:text-[#2C221E]">Catálogo</button>
-            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Mates'); }} className="hover:text-[#2C221E]">Mates</button>
-            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Termos'); }} className="hover:text-[#2C221E]">Termos</button>
+            <button onClick={() => { setSelectedCategory('Todas'); changeView('home'); }} className="hover:text-[#2C221E]">Inicio</button>
+            <button onClick={() => { setSelectedCategory('Todas'); changeView('catalog'); }} className="hover:text-[#2C221E]">Catálogo</button>
+            <button onClick={() => { setSelectedCategory('Mates'); changeView('catalog'); }} className="hover:text-[#2C221E]">Mates</button>
+            <button onClick={() => { setSelectedCategory('Termos'); changeView('catalog'); }} className="hover:text-[#2C221E]">Termos</button>
           </nav>
 
           <button onClick={() => setIsCartOpen(true)} className="relative p-2 text-[#2C221E]">
@@ -229,14 +268,13 @@ export default function App() {
           </button>
         </div>
 
-        {/* Menú Desplegable Móvil */}
         {isMenuOpen && (
           <div className="md:hidden bg-[#FAF7F2] border-b border-[#E8E2D9] px-4 py-6 space-y-4 text-center tracking-widest uppercase text-sm font-medium">
-            <button onClick={() => { setCurrentView('home'); setSelectedCategory('Todas'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Inicio</button>
-            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Todas'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Catálogo Completo</button>
-            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Mates'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Mates</button>
-            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Termos'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Termos</button>
-            <button onClick={() => { setCurrentView('admin'); setIsMenuOpen(false); }} className="block w-full py-2 text-[#4E5844] font-bold border-t border-[#E8E2D9]">Acceso Panel Admin</button>
+            <button onClick={() => { setSelectedCategory('Todas'); changeView('home'); }} className="block w-full py-2 hover:bg-white">Inicio</button>
+            <button onClick={() => { setSelectedCategory('Todas'); changeView('catalog'); }} className="block w-full py-2 hover:bg-white">Catálogo Completo</button>
+            <button onClick={() => { setSelectedCategory('Mates'); changeView('catalog'); }} className="block w-full py-2 hover:bg-white">Mates</button>
+            <button onClick={() => { setSelectedCategory('Termos'); changeView('catalog'); }} className="block w-full py-2 hover:bg-white">Termos</button>
+            <button onClick={() => changeView('admin')} className="block w-full py-2 text-[#4E5844] font-bold border-t border-[#E8E2D9]">Acceso Panel Admin</button>
           </div>
         )}
       </header>
@@ -254,7 +292,7 @@ export default function App() {
                   Mates artesanales, termos de alta conservación y accesorios materos.
                 </p>
                 <button 
-                  onClick={() => { setCurrentView('catalog'); setSelectedCategory('Todas'); }}
+                  onClick={() => { setSelectedCategory('Todas'); changeView('catalog'); }}
                   className="bg-[#FAF7F2] text-[#2C221E] px-8 py-3 uppercase tracking-widest text-xs font-bold"
                 >
                   Ver Catálogo
@@ -274,7 +312,7 @@ export default function App() {
                       <p className="text-sm font-bold mt-2">${(product.promoPrice || product.price).toLocaleString('es-AR')}</p>
                     </div>
                     <button 
-                      onClick={() => { setSelectedProduct(product); setCurrentView('product'); }}
+                      onClick={() => { setSelectedProduct(product); changeView('product'); }}
                       className="w-full mt-4 bg-[#2C221E] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest"
                     >
                       Ver Opciones
@@ -301,7 +339,7 @@ export default function App() {
                       <p className="text-sm font-bold mt-2">${(product.promoPrice || product.price).toLocaleString('es-AR')}</p>
                     </div>
                     <button 
-                      onClick={() => { setSelectedProduct(product); setCurrentView('product'); }}
+                      onClick={() => { setSelectedProduct(product); changeView('product'); }}
                       className="w-full mt-4 bg-[#2C221E] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest"
                     >
                       Ver Opciones
@@ -314,7 +352,7 @@ export default function App() {
 
         {currentView === 'product' && selectedProduct && (
           <div className="max-w-5xl mx-auto px-4 py-12">
-            <button onClick={() => setCurrentView('catalog')} className="flex items-center text-xs uppercase text-[#8C7A6B] mb-6">
+            <button onClick={() => changeView('catalog')} className="flex items-center text-xs uppercase text-[#8C7A6B] mb-6">
               <ArrowLeft size={16} className="mr-2" /> Volver
             </button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -343,7 +381,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VISTA DEL PANEL DE ADMINISTRACIÓN */}
+        {/* PANEL DE ADMINISTRACIÓN CON SESIÓN PERSISTENTE */}
         {currentView === 'admin' && (
           <div className="max-w-4xl mx-auto px-4 py-12">
             {!isAdminLoggedIn ? (
@@ -383,9 +421,9 @@ export default function App() {
                 <div className="flex justify-between items-center mb-8 pb-4 border-b">
                   <div>
                     <h2 className="text-3xl font-serif text-[#2C221E]">Panel de Control Admin</h2>
-                    <p className="text-xs text-[#8C7A6B]">Gestión de catálogo e inventario</p>
+                    <p className="text-xs text-[#8C7A6B]">Sesión activa • Gestión de catálogo</p>
                   </div>
-                  <button onClick={() => setIsAdminLoggedIn(false)} className="text-xs text-red-600 uppercase font-bold">
+                  <button onClick={handleAdminLogout} className="text-xs text-red-600 uppercase font-bold border border-red-200 px-3 py-1 bg-red-50">
                     Cerrar Sesión
                   </button>
                 </div>
@@ -489,7 +527,7 @@ export default function App() {
                   </form>
                 </div>
 
-                {/* Listado de Productos Existentes */}
+                {/* Listado de Productos */}
                 <h3 className="text-lg font-serif text-[#2C221E] mb-4">Catálogo Activo ({products.length} productos)</h3>
                 <div className="space-y-4">
                   {products.map(p => (
@@ -565,7 +603,7 @@ export default function App() {
                     <span>${cartTotal.toLocaleString('es-AR')}</span>
                   </div>
                   <button 
-                    onClick={() => { setIsCartOpen(false); setCurrentView('checkout'); }}
+                    onClick={() => { setIsCartOpen(false); changeView('checkout'); }}
                     className="w-full bg-[#2C221E] text-[#FAF7F2] py-4 text-xs uppercase tracking-widest font-bold hover:bg-[#4E5844] transition"
                   >
                     FINALIZAR COMPRA
@@ -582,9 +620,8 @@ export default function App() {
           <h4 className="text-xl font-serif tracking-widest">ORIGEN KA’A</h4>
           <p className="text-xs text-[#E8E2D9]">El origen de cada encuentro • Ushuaia, Tierra del Fuego</p>
           
-          {/* Botón Acceso Admin en el pie de página */}
           <button 
-            onClick={() => setCurrentView('admin')}
+            onClick={() => changeView('admin')}
             className="inline-flex items-center text-xs text-[#8C7A6B] hover:text-[#FAF7F2] tracking-widest uppercase pt-4"
           >
             <Lock size={12} className="mr-1" /> Acceso Administración
