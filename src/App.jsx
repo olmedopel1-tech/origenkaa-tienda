@@ -3,7 +3,7 @@ import {
   ShoppingBag, Search, Menu, X, Instagram, MessageCircle, 
   Truck, ShieldCheck, RefreshCw, ChevronRight, Star, Plus, 
   Minus, Trash2, ArrowLeft, Filter, CheckCircle2, Lock, User, 
-  Settings, Package, CreditCard, AlertCircle, Copy, ExternalLink 
+  Settings, Package, CreditCard, AlertCircle, Copy, ExternalLink, Image as ImageIcon
 } from 'lucide-react';
 
 const INITIAL_PRODUCTS = [
@@ -40,27 +40,11 @@ const INITIAL_PRODUCTS = [
       { id: 'v2-1', name: 'Verde Yerba Matte', sku: 'TRM-12L-VD', stock: 12 },
       { id: 'v2-2', name: 'Negro Azabache', sku: 'TRM-12L-NG', stock: 4 }
     ]
-  },
-  {
-    id: 'prod-3',
-    name: 'Bombilla de Alpaca Fina Cincelada',
-    category: 'Bombillas',
-    price: 14500,
-    promoPrice: 12900,
-    description: 'Bombilla de alpaca purificada con filtro de cuchara desmontable fácil de limpiar.',
-    featured: false,
-    active: true,
-    images: [
-      'https://images.unsplash.com/photo-1576092768241-dec231879fc3?q=80&w=800&auto=format&fit=crop'
-    ],
-    variants: [
-      { id: 'v3-1', name: 'Boquilla Plana - Cincelada', sku: 'BMB-ALP-PL', stock: 15 }
-    ]
   }
 ];
 
 export default function App() {
-  const [products] = useState(() => {
+  const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem('kaa_products');
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
   });
@@ -76,30 +60,45 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   
-  // Datos de Checkout
-  const [checkoutStep, setCheckoutStep] = useState(1);
+  // Login y Estado Admin
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminTab, setAdminTab] = useState('products'); // products, orders
+
+  // Formulario para Crear / Editar Producto en Admin
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    category: 'Mates',
+    price: '',
+    promoPrice: '',
+    description: '',
+    image: '',
+    variantName: 'Estándar',
+    sku: '',
+    stock: 10
+  });
+
+  // Datos Checkout
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     address: '',
-    province: 'Tierra del Fuego',
-    city: 'Ushuaia',
     paymentMethod: 'transfer'
   });
   const [lastOrder, setLastOrder] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('kaa_products', JSON.stringify(products));
+  }, [products]);
 
   useEffect(() => {
     localStorage.setItem('kaa_cart', JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (product, variant, quantity = 1) => {
-    if (variant.stock < quantity) {
-      alert('Sin stock disponible');
-      return;
-    }
-
     setCart(prev => {
       const existing = prev.find(item => item.productId === product.id && item.variantId === variant.id);
       if (existing) {
@@ -140,24 +139,56 @@ export default function App() {
   const shippingCost = cartSubtotal >= freeShippingMin || cartSubtotal === 0 ? 0 : 6500;
   const cartTotal = cartSubtotal + shippingCost;
 
-  const handleCreateOrder = (e) => {
+  const handleAdminLogin = (e) => {
     e.preventDefault();
-    const orderId = `ORD-${Date.now().toString().slice(-6)}`;
-    const newOrder = {
-      id: orderId,
-      customer: formData,
-      items: cart,
-      subtotal: cartSubtotal,
-      shipping: shippingCost,
-      total: cartTotal,
-      status: 'Pendiente de verificación',
-      date: new Date().toLocaleDateString('es-AR')
+    if (adminEmail === 'admin@origenkaa.com.ar' && adminPassword === 'origen2026') {
+      setIsAdminLoggedIn(true);
+    } else {
+      alert('Credenciales incorrectas. Verificá mail y contraseña.');
+    }
+  };
+
+  const handleAddProduct = (e) => {
+    e.preventDefault();
+    const created = {
+      id: `prod-${Date.now()}`,
+      name: newProduct.name,
+      category: newProduct.category,
+      price: Number(newProduct.price),
+      promoPrice: newProduct.promoPrice ? Number(newProduct.promoPrice) : null,
+      description: newProduct.description,
+      featured: true,
+      active: true,
+      images: [newProduct.image || 'https://images.unsplash.com/photo-1594910085817-497672e8cb30?q=80&w=800&auto=format&fit=crop'],
+      variants: [
+        {
+          id: `v-${Date.now()}`,
+          name: newProduct.variantName,
+          sku: newProduct.sku || `SKU-${Date.now().toString().slice(-4)}`,
+          stock: Number(newProduct.stock)
+        }
+      ]
     };
 
-    setLastOrder(newOrder);
-    setCart([]);
-    setIsCartOpen(false);
-    setCurrentView('confirmation');
+    setProducts([created, ...products]);
+    alert('¡Producto cargado con éxito en el catálogo!');
+    setNewProduct({
+      name: '',
+      category: 'Mates',
+      price: '',
+      promoPrice: '',
+      description: '',
+      image: '',
+      variantName: 'Estándar',
+      sku: '',
+      stock: 10
+    });
+  };
+
+  const handleDeleteProduct = (id) => {
+    if (confirm('¿Estás seguro de eliminar este producto?')) {
+      setProducts(products.filter(p => p.id !== id));
+    }
   };
 
   return (
@@ -166,13 +197,13 @@ export default function App() {
         Envíos gratis a todo el país en compras superiores a $75.000 | Ushuaia, Tierra del Fuego
       </div>
 
-      <header className="sticky top-0 z-40 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-[#E8E2D9]">
+      <header className="sticky top-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8E2D9]">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 text-[#2C221E]">
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {isMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
 
-          <div onClick={() => { setCurrentView('home'); setSelectedCategory('Todas'); }} className="cursor-pointer text-center md:text-left">
+          <div onClick={() => { setCurrentView('home'); setSelectedCategory('Todas'); setIsMenuOpen(false); }} className="cursor-pointer text-center md:text-left">
             <h1 className="text-2xl md:text-3xl font-serif tracking-widest text-[#2C221E] font-bold">
               ORIGEN KA’A
             </h1>
@@ -197,6 +228,17 @@ export default function App() {
             )}
           </button>
         </div>
+
+        {/* Menú Desplegable Móvil */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-[#FAF7F2] border-b border-[#E8E2D9] px-4 py-6 space-y-4 text-center tracking-widest uppercase text-sm font-medium">
+            <button onClick={() => { setCurrentView('home'); setSelectedCategory('Todas'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Inicio</button>
+            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Todas'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Catálogo Completo</button>
+            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Mates'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Mates</button>
+            <button onClick={() => { setCurrentView('catalog'); setSelectedCategory('Termos'); setIsMenuOpen(false); }} className="block w-full py-2 hover:bg-white">Termos</button>
+            <button onClick={() => { setCurrentView('admin'); setIsMenuOpen(false); }} className="block w-full py-2 text-[#4E5844] font-bold border-t border-[#E8E2D9]">Acceso Panel Admin</button>
+          </div>
+        )}
       </header>
 
       <main className="flex-1">
@@ -248,22 +290,24 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-4 py-12">
             <h2 className="text-3xl font-serif text-[#2C221E] mb-6">Catálogo Completo</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products.map(product => (
-                <div key={product.id} className="bg-white border border-[#E8E2D9] p-4 flex flex-col justify-between">
-                  <div>
-                    <img src={product.images[0]} alt={product.name} className="w-full aspect-square object-cover mb-4" />
-                    <span className="text-[10px] uppercase text-[#8C7A6B]">{product.category}</span>
-                    <h3 className="text-lg font-serif text-[#2C221E] mt-1">{product.name}</h3>
-                    <p className="text-sm font-bold mt-2">${(product.promoPrice || product.price).toLocaleString('es-AR')}</p>
+              {products
+                .filter(p => selectedCategory === 'Todas' || p.category === selectedCategory)
+                .map(product => (
+                  <div key={product.id} className="bg-white border border-[#E8E2D9] p-4 flex flex-col justify-between">
+                    <div>
+                      <img src={product.images[0]} alt={product.name} className="w-full aspect-square object-cover mb-4" />
+                      <span className="text-[10px] uppercase text-[#8C7A6B]">{product.category}</span>
+                      <h3 className="text-lg font-serif text-[#2C221E] mt-1">{product.name}</h3>
+                      <p className="text-sm font-bold mt-2">${(product.promoPrice || product.price).toLocaleString('es-AR')}</p>
+                    </div>
+                    <button 
+                      onClick={() => { setSelectedProduct(product); setCurrentView('product'); }}
+                      className="w-full mt-4 bg-[#2C221E] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest"
+                    >
+                      Ver Opciones
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => { setSelectedProduct(product); setCurrentView('product'); }}
-                    className="w-full mt-4 bg-[#2C221E] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest"
-                  >
-                    Ver Opciones
-                  </button>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
@@ -299,109 +343,172 @@ export default function App() {
           </div>
         )}
 
-        {/* Vista de Checkout */}
-        {currentView === 'checkout' && (
-          <div className="max-w-2xl mx-auto px-4 py-12">
-            <h2 className="text-2xl font-serif text-[#2C221E] mb-6">Finalizar Compra</h2>
-            <form onSubmit={handleCreateOrder} className="space-y-4 bg-white p-6 border border-[#E8E2D9]">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#2C221E]">1. Datos de Envío</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <input 
-                  type="text" required placeholder="Nombre" 
-                  value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})}
-                  className="p-3 border text-sm w-full" 
-                />
-                <input 
-                  type="text" required placeholder="Apellido" 
-                  value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})}
-                  className="p-3 border text-sm w-full" 
-                />
-              </div>
-              <input 
-                type="email" required placeholder="Email" 
-                value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-                className="p-3 border text-sm w-full" 
-              />
-              <input 
-                type="tel" required placeholder="Teléfono / WhatsApp" 
-                value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
-                className="p-3 border text-sm w-full" 
-              />
-              <input 
-                type="text" required placeholder="Dirección de Entrega" 
-                value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})}
-                className="p-3 border text-sm w-full" 
-              />
-
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#2C221E] pt-4">2. Método de Pago</h3>
-              <div className="space-y-2">
-                <label className="flex items-center p-3 border cursor-pointer hover:bg-[#FAF7F2]">
-                  <input 
-                    type="radio" name="payment" value="transfer" 
-                    checked={formData.paymentMethod === 'transfer'} 
-                    onChange={e => setFormData({...formData, paymentMethod: e.target.value})}
-                    className="mr-3" 
-                  />
-                  <div>
-                    <p className="text-sm font-bold">Transferencia Bancaria Directa</p>
-                    <p className="text-xs text-[#8C7A6B]">Datos para transferir al confirmar el pedido</p>
-                  </div>
-                </label>
-
-                <label className="flex items-center p-3 border cursor-pointer hover:bg-[#FAF7F2]">
-                  <input 
-                    type="radio" name="payment" value="mercadopago" 
-                    checked={formData.paymentMethod === 'mercadopago'} 
-                    onChange={e => setFormData({...formData, paymentMethod: e.target.value})}
-                    className="mr-3" 
-                  />
-                  <div>
-                    <p className="text-sm font-bold">Mercado Pago / Tarjetas</p>
-                    <p className="text-xs text-[#8C7A6B]">Págalo online con dinero en cuenta o tarjetas</p>
-                  </div>
-                </label>
-              </div>
-
-              <div className="pt-4 border-t my-4">
-                <div className="flex justify-between text-base font-bold text-[#2C221E] mb-4">
-                  <span>Total a Pagar:</span>
-                  <span>${cartTotal.toLocaleString('es-AR')}</span>
+        {/* VISTA DEL PANEL DE ADMINISTRACIÓN */}
+        {currentView === 'admin' && (
+          <div className="max-w-4xl mx-auto px-4 py-12">
+            {!isAdminLoggedIn ? (
+              <div className="max-w-md mx-auto bg-white p-8 border border-[#E8E2D9]">
+                <div className="text-center mb-6">
+                  <Lock size={32} className="mx-auto text-[#4E5844] mb-2" />
+                  <h2 className="text-2xl font-serif text-[#2C221E]">Panel de Administración</h2>
+                  <p className="text-xs text-[#8C7A6B] uppercase tracking-widest mt-1">ORIGEN KA’A</p>
                 </div>
-                <button type="submit" className="w-full bg-[#2C221E] text-[#FAF7F2] py-4 text-xs uppercase tracking-widest font-bold">
-                  Confirmar Pedido
-                </button>
+
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs uppercase font-bold text-[#2C221E] mb-1">Email Admin</label>
+                    <input 
+                      type="email" required placeholder="admin@origenkaa.com.ar"
+                      value={adminEmail} onChange={e => setAdminEmail(e.target.value)}
+                      className="w-full p-3 border text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs uppercase font-bold text-[#2C221E] mb-1">Contraseña</label>
+                    <input 
+                      type="password" required placeholder="••••••••"
+                      value={adminPassword} onChange={e => setAdminPassword(e.target.value)}
+                      className="w-full p-3 border text-sm"
+                    />
+                  </div>
+
+                  <button type="submit" className="w-full bg-[#2C221E] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest font-bold">
+                    Ingresar al Panel
+                  </button>
+                </form>
               </div>
-            </form>
-          </div>
-        )}
+            ) : (
+              <div>
+                <div className="flex justify-between items-center mb-8 pb-4 border-b">
+                  <div>
+                    <h2 className="text-3xl font-serif text-[#2C221E]">Panel de Control Admin</h2>
+                    <p className="text-xs text-[#8C7A6B]">Gestión de catálogo e inventario</p>
+                  </div>
+                  <button onClick={() => setIsAdminLoggedIn(false)} className="text-xs text-red-600 uppercase font-bold">
+                    Cerrar Sesión
+                  </button>
+                </div>
 
-        {/* Vista de Confirmación de Pedido */}
-        {currentView === 'confirmation' && lastOrder && (
-          <div className="max-w-lg mx-auto px-4 py-16 text-center">
-            <CheckCircle2 size={48} className="mx-auto text-[#4E5844] mb-4" />
-            <h2 className="text-2xl font-serif text-[#2C221E] mb-2">¡Pedido Confirmado!</h2>
-            <p className="text-xs text-[#8C7A6B] uppercase tracking-widest mb-6">Número de Orden: {lastOrder.id}</p>
+                {/* Formulario Cargar Producto */}
+                <div className="bg-white p-6 border border-[#E8E2D9] mb-12">
+                  <h3 className="text-lg font-serif text-[#2C221E] mb-4">Cargar Nuevo Producto</h3>
+                  <form onSubmit={handleAddProduct} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">Nombre del Producto</label>
+                        <input 
+                          type="text" required placeholder="Ej: Mate Torpedo de Calabaza"
+                          value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                          className="w-full p-2 border text-sm"
+                        />
+                      </div>
 
-            <div className="bg-white p-6 border text-left space-y-3 text-sm mb-6">
-              <p className="font-bold text-[#2C221E]">Datos para Transferencia Bancaria:</p>
-              <p><strong>Banco:</strong> Banco Nación</p>
-              <p><strong>Alias:</strong> ORIGEN.KAA.USH</p>
-              <p><strong>CBU:</strong> 0110000000000000000000</p>
-              <p><strong>Titular:</strong> ORIGEN KA'A S.A.S.</p>
-              <p className="text-xs text-[#8C7A6B] pt-2 border-t">Monto total: <strong>${lastOrder.total.toLocaleString('es-AR')}</strong></p>
-            </div>
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">Categoría</label>
+                        <select 
+                          value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})}
+                          className="w-full p-2 border text-sm bg-white"
+                        >
+                          <option value="Mates">Mates</option>
+                          <option value="Termos">Termos</option>
+                          <option value="Bombillas">Bombillas</option>
+                          <option value="Accesorios">Accesorios</option>
+                          <option value="Combos">Combos</option>
+                        </select>
+                      </div>
+                    </div>
 
-            <a 
-              href={`https://wa.me/54290115000000?text=Hola%20ORIGEN%20KA’A,%20realicé%20el%20pedido%20${lastOrder.id}%20por%20$${lastOrder.total}`}
-              target="_blank" rel="noreferrer"
-              className="inline-flex items-center justify-center w-full bg-[#4E5844] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest font-bold mb-3"
-            >
-              <MessageCircle size={16} className="mr-2" /> Enviar Comprobante por WhatsApp
-            </a>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">Precio Normal ($)</label>
+                        <input 
+                          type="number" required placeholder="42000"
+                          value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})}
+                          className="w-full p-2 border text-sm"
+                        />
+                      </div>
 
-            <button onClick={() => setCurrentView('home')} className="text-xs text-[#8C7A6B] uppercase tracking-widest underline">
-              Volver a la tienda
-            </button>
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">Precio Promocional ($ opcional)</label>
+                        <input 
+                          type="number" placeholder="38000"
+                          value={newProduct.promoPrice} onChange={e => setNewProduct({...newProduct, promoPrice: e.target.value})}
+                          className="w-full p-2 border text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">URL de la Foto</label>
+                      <input 
+                        type="url" placeholder="https://..."
+                        value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})}
+                        className="w-full p-2 border text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase font-bold mb-1">Descripción</label>
+                      <textarea 
+                        rows="3" placeholder="Detalle del producto..."
+                        value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})}
+                        className="w-full p-2 border text-sm"
+                      ></textarea>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 bg-[#FAF7F2] p-3 border">
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">Variante / Opción</label>
+                        <input 
+                          type="text" placeholder="Ej: Alpaca / Negro"
+                          value={newProduct.variantName} onChange={e => setNewProduct({...newProduct, variantName: e.target.value})}
+                          className="w-full p-2 border text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">SKU</label>
+                        <input 
+                          type="text" placeholder="MAT-TOR-01"
+                          value={newProduct.sku} onChange={e => setNewProduct({...newProduct, sku: e.target.value})}
+                          className="w-full p-2 border text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs uppercase font-bold mb-1">Stock Inicial</label>
+                        <input 
+                          type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})}
+                          className="w-full p-2 border text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="w-full bg-[#4E5844] text-[#FAF7F2] py-3 text-xs uppercase tracking-widest font-bold">
+                      Guardar y Publicar en la Tienda
+                    </button>
+                  </form>
+                </div>
+
+                {/* Listado de Productos Existentes */}
+                <h3 className="text-lg font-serif text-[#2C221E] mb-4">Catálogo Activo ({products.length} productos)</h3>
+                <div className="space-y-4">
+                  {products.map(p => (
+                    <div key={p.id} className="bg-white p-4 border flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <img src={p.images[0]} alt={p.name} className="w-12 h-12 object-cover border" />
+                        <div>
+                          <p className="font-bold text-sm">{p.name}</p>
+                          <p className="text-xs text-[#8C7A6B]">{p.category} • ${(p.promoPrice || p.price).toLocaleString('es-AR')}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => handleDeleteProduct(p.id)} className="text-red-600 p-2">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -474,6 +581,14 @@ export default function App() {
         <div className="max-w-7xl mx-auto text-center space-y-4">
           <h4 className="text-xl font-serif tracking-widest">ORIGEN KA’A</h4>
           <p className="text-xs text-[#E8E2D9]">El origen de cada encuentro • Ushuaia, Tierra del Fuego</p>
+          
+          {/* Botón Acceso Admin en el pie de página */}
+          <button 
+            onClick={() => setCurrentView('admin')}
+            className="inline-flex items-center text-xs text-[#8C7A6B] hover:text-[#FAF7F2] tracking-widest uppercase pt-4"
+          >
+            <Lock size={12} className="mr-1" /> Acceso Administración
+          </button>
         </div>
       </footer>
     </div>
